@@ -26,37 +26,44 @@ let formData = '';
 refs.form.addEventListener('submit', onSubmit);
 refs.gallery.addEventListener('click', onGalleryClick);
 
-function onSubmit(e) {
+async function onSubmit(e) {
   e.preventDefault();
+  observer.unobserve(refs.guard);
+
   refs.gallery.innerHTML = '';
+  page = 1;
+
   formData = e.currentTarget.elements.searchQuery.value.trim();
-  if (formData === '') {
+  if (!formData) {
+    refs.gallery.innerHTML = '';
     onError();
     return;
-  } 
-  page = 1;
-  const objForMarkup = getDataForGallery();
-  refs.gallery.insertAdjacentHTML('beforeend', marcupCard(objForMarkup.hits));
-  observer.observe(refs.guard);
-  e.currentTarget.reset();
+  }
+
+  e.target.reset();
+
+  try {
+    const result = await getDataForGallery(formData, page);
+
+    if (result.hits.length >= 40) {
+      observer.observe(refs.guard);
+    }
+    return result;
+  } catch (error) {
+    return;
+  }
 }
 
-async function getDataForGallery() {
-  try {
-    const result = await onSearch(formData, page);
-    if (result.hits.length === 0) {
-      throw new Error();
-    }
-
-    
-      Notify.success(`Hooray! We found ${result.totalHits} images.`);
-    
-
-
-    return result;
-  } catch {
+async function getDataForGallery(formData, page) {
+  const result = await onSearch(formData, page);
+  if (result.hits.length === 0) {
     onError();
+    return;
   }
+
+  Notify.success(`Hooray! We found ${result.totalHits} images.`);
+  refs.gallery.insertAdjacentHTML('beforeend', marcupCard(result.hits));
+  return result;
 }
 
 function onError() {
@@ -71,20 +78,18 @@ async function onLoad(entries) {
     if (entry.isIntersecting) {
       page += 1;
       onSearch(formData, page).then(data => {
-        
         const markup = marcupCard(data.hits);
         refs.gallery.insertAdjacentHTML('beforeend', markup);
 
         if (page === 13) {
-        Notify.info('Great job! All of the images have been reviewed. Try looking for something else!');
-        observer.unobserve(refs.guard);
-      }
-      })
+          Notify.info(
+            'Great job! All of the images have been reviewed. Try looking for something else!'
+          );
+          observer.unobserve(refs.guard);
+        }
+      });
       gallerySimplebox.refresh();
-
-      
     }
-    return;
   });
 }
 

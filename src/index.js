@@ -26,19 +26,19 @@ let formData = '';
 refs.form.addEventListener('submit', onSubmit);
 refs.gallery.addEventListener('click', onGalleryClick);
 
-async function onSubmit(e) {
+function onSubmit(e) {
   e.preventDefault();
   refs.gallery.innerHTML = '';
   formData = e.currentTarget.elements.searchQuery.value.trim();
   if (formData === '') {
     onError();
     return;
-  }
-  e.currentTarget.reset();
-  const objForMarkup = await getDataForGallery();
-  refs.gallery.insertAdjacentHTML('beforeend', marcupCard(objForMarkup));
-
+  } 
+  page = 1;
+  const objForMarkup = getDataForGallery();
+  refs.gallery.insertAdjacentHTML('beforeend', marcupCard(objForMarkup.hits));
   observer.observe(refs.guard);
+  e.currentTarget.reset();
 }
 
 async function getDataForGallery() {
@@ -48,11 +48,12 @@ async function getDataForGallery() {
       throw new Error();
     }
 
-    if (page === 1) {
+    
       Notify.success(`Hooray! We found ${result.totalHits} images.`);
-    }
+    
 
-    return result.hits;
+
+    return result;
   } catch {
     onError();
   }
@@ -69,13 +70,19 @@ async function onLoad(entries) {
     console.log(entry);
     if (entry.isIntersecting) {
       page += 1;
-      const data = onSearch(formData, page);
-      refs.gallery.insertAdjacentHTML('beforeend', marcupCard(data.hits));
+      onSearch(formData, page).then(data => {
+        
+        const markup = marcupCard(data.hits);
+        refs.gallery.insertAdjacentHTML('beforeend', markup);
+
+        if (page === 13) {
+        Notify.info('Great job! All of the images have been reviewed. Try looking for something else!');
+        observer.unobserve(refs.guard);
+      }
+      })
       gallerySimplebox.refresh();
 
-      if (page === 1 || page === 13) {
-        observer.unobserve(guard);
-      }
+      
     }
     return;
   });

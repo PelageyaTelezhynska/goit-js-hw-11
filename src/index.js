@@ -74,14 +74,15 @@ function onError() {
 
 async function onLoad(entries) {
   const infinityScroll = await entries.forEach(entry => {
-    console.log(entry);
     if (entry.isIntersecting) {
       page += 1;
       onSearch(formData, page).then(data => {
         const markup = marcupCard(data.hits);
         refs.gallery.insertAdjacentHTML('beforeend', markup);
+        let numPage = Number(data.totalHits) / 40;
+        console.log(numPage);
 
-        if (page === 13) {
+        if (page >= numPage) {
           Notify.info(
             'Great job! All of the images have been reviewed. Try looking for something else!'
           );
